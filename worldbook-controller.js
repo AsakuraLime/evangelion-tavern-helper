@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const BOOK_NAME = 'EVANGELION';
+  const BOOK_NAME = 'EVANGELION 4.1';
   const PANEL_ID = 'eva-worldbook-console';
   const STYLE_ID = 'eva-worldbook-console-style';
   const STAGES = {
@@ -54,10 +54,11 @@
 
   function entryScope(entry) {
     const explicit = entry?.extensions?.eva_scope;
-    if (explicit === 'A' || explicit === 'B' || explicit === 'COMMON') return explicit;
+    if (['A', 'B', 'AB', 'COMMON', 'SYSTEM'].includes(explicit)) return explicit;
     const title = String(entry?.comment || entry?.title || '');
     if (/::A(?:::|线)/i.test(title)) return 'A';
     if (/::B(?:::|线)/i.test(title)) return 'B';
+    if (/::共通|::衣柜/.test(title)) return 'AB';
     return 'COMMON';
   }
 
@@ -70,9 +71,33 @@
     const kind = entry?.extensions?.eva_kind || '';
     if (kind === 'prompt') return entry.comment !== 'SYSTEM::[initvar]变量初始化勿开';
     const scope = entryScope(entry);
-    if (scope !== 'COMMON' && scope !== line) return false;
+    if (scope !== 'COMMON' && scope !== 'AB' && scope !== line) return false;
     const stages = entryStages(entry);
     return stages.includes('*') || stages.includes(stage);
+  }
+
+  function entryGroup(entry, line) {
+    const kind = entry?.extensions?.eva_kind || 'other';
+    const scope = entryScope(entry);
+    const title = String(entry?.comment || '');
+    if (kind === 'prompt') return '核心规则';
+    if (kind === 'character' && /::共通$/.test(title)) return '人物共通人设';
+    if (kind === 'character' && /::衣柜/.test(title)) return '人物服装版本';
+    if (kind === 'character' && scope === line) return `CASE ${line} 人物人设`;
+    if (kind === 'dossier') return '人物行为档案';
+    if (['faction', 'region'].includes(kind)) return `CASE ${line} 组织与地区`;
+    if (entryStages(entry)[0] !== '*') return '阶段剧情资料';
+    return '世界观资料';
+  }
+
+  function groupStats(entries, line) {
+    const stats = {};
+    for (const entry of entries) {
+      if (entry.disable) continue;
+      const group = entryGroup(entry, line);
+      stats[group] = (stats[group] || 0) + 1;
+    }
+    return Object.entries(stats).map(([name, count]) => `${name} ${count}`).join('｜');
   }
 
   function setStatus(text, error = false) {
@@ -108,9 +133,9 @@
       }
       await saveBook(handle);
       const state = {line, stage, changed, opened, closed, at: Date.now()};
-      localStorage.setItem('eva_magi_timeline_v4', JSON.stringify(state));
+      localStorage.setItem('eva_magi_timeline_v4_1', JSON.stringify(state));
       setActive(line, stage);
-      setStatus(`${line} · ${stage} 已装载\n修改 ${changed} 条｜开启 ${opened}｜关闭 ${closed}`);
+      setStatus(`${line} · ${stage} 已装载\n修改 ${changed} 条｜开启 ${opened}｜关闭 ${closed}\n${groupStats(entries, line)}`);
       window.dispatchEvent(new CustomEvent('eva:timeline-changed', {detail: state}));
       try { window.parent?.dispatchEvent(new CustomEvent('eva:timeline-changed', {detail: state})); } catch (_) {}
       if (!options.silent) toastr.success(`${line} · ${stage}`, '世界书切换完成');
@@ -127,7 +152,8 @@
       const handle = await loadBook();
       const entries = Object.values(handle.data.entries || {});
       const opened = entries.filter(entry => !entry.disable).length;
-      setStatus(`世界书：${BOOK_NAME}\n总计 ${entries.length} 条｜当前开启 ${opened} 条`);
+      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_1') || 'null');
+      setStatus(`世界书：${BOOK_NAME}\n总计 ${entries.length} 条｜当前开启 ${opened} 条\n${groupStats(entries, saved?.line || 'A')}`);
     } catch (error) { setStatus(`扫描失败：${error.message}`, true); }
   }
 
@@ -151,7 +177,7 @@
     panel.on('click', '[data-scan]', scanBook);
     panel.on('dblclick', '.eva-wb-head', () => panel.toggleClass('min'));
     try {
-      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4') || 'null');
+      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_1') || 'null');
       if (saved?.line && saved?.stage) setActive(saved.line, saved.stage);
     } catch (_) {}
   }

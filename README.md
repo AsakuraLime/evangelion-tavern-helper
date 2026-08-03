@@ -1,6 +1,6 @@
 # EVANGELION Tavern Helper scripts
 
-External scripts for the EVANGELION v4 SillyTavern character card.
+External scripts for the EVANGELION 4.1 SillyTavern character card.
 
 - `mvu-schema.js`: MVU/Zod variable schema.
 - `worldbook-controller.js`: timeline world-book switch and shared initialization API.

@@ -29,7 +29,7 @@
 
   on(window, 'eva:timeline-changed', timelineChanged);
   try {
-    const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4') || 'null');
+    const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_1') || 'null');
     if (saved?.line && saved?.stage) timelineChanged({detail: saved});
   } catch (_) {}
 
