@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const GLOBAL = '__EVA_EVENT_ENGINE_V4__';
+  const GLOBAL = '__EVA_EVENT_ENGINE_V4_2__';
   if (window[GLOBAL]?.cleanup) window[GLOBAL].cleanup();
 
   const listeners = [];
@@ -29,14 +29,14 @@
 
   on(window, 'eva:timeline-changed', timelineChanged);
   try {
-    const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_1') || 'null');
+    const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_2') || 'null');
     if (saved?.line && saved?.stage) timelineChanged({detail: saved});
   } catch (_) {}
 
   $(async () => {
     await waitGlobalInitialized('Mvu');
     if (typeof eventOn === 'function') eventOn('mag_variable_initialized', variableReady);
-    toastr.success('世界书与变量联动已加载', 'MAGI');
+    toastr.success('事件联动回路接通', 'MAGI');
   });
 
   window[GLOBAL] = {cleanup() { while (listeners.length) listeners.pop()(); }};

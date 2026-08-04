@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const BOOK_NAME = 'EVANGELION 4.1';
+  const BOOK_NAME = 'EVANGELION 4.2';
   const PANEL_ID = 'eva-worldbook-console';
   const STYLE_ID = 'eva-worldbook-console-style';
   const STAGES = {
@@ -32,11 +32,11 @@
     const ctx = context();
     if (ctx?.loadWorldInfo) {
       const data = await ctx.loadWorldInfo(BOOK_NAME);
-      if (!data?.entries) throw new Error(`没有找到世界书：${BOOK_NAME}`);
+      if (!data?.entries) throw new Error('中央教条区未返回指定档案域');
       return {data, ctx, mode: 'context'};
     }
     const data = await apiPost('/api/worldinfo/get', {name: BOOK_NAME});
-    if (!data?.entries) throw new Error(`没有找到世界书：${BOOK_NAME}`);
+    if (!data?.entries) throw new Error('中央教条区未返回指定档案域');
     return {data, ctx: null, mode: 'api'};
   }
 
@@ -80,14 +80,14 @@
     const kind = entry?.extensions?.eva_kind || 'other';
     const scope = entryScope(entry);
     const title = String(entry?.comment || '');
-    if (kind === 'prompt') return '核心规则';
-    if (kind === 'character' && /::共通$/.test(title)) return '人物共通人设';
-    if (kind === 'character' && /::衣柜/.test(title)) return '人物服装版本';
-    if (kind === 'character' && scope === line) return `CASE ${line} 人物人设`;
-    if (kind === 'dossier') return '人物行为档案';
-    if (['faction', 'region'].includes(kind)) return `CASE ${line} 组织与地区`;
-    if (entryStages(entry)[0] !== '*') return '阶段剧情资料';
-    return '世界观资料';
+    if (kind === 'prompt') return '核心指令';
+    if (kind === 'character' && /::共通$/.test(title)) return '人员基础档案';
+    if (kind === 'character' && /::衣柜/.test(title)) return '服装连续性';
+    if (kind === 'character' && scope === line) return `CASE ${line} 人员履历`;
+    if (kind === 'dossier') return '行为评估';
+    if (['faction', 'region'].includes(kind)) return `CASE ${line} 组织与区域`;
+    if (entryStages(entry)[0] !== '*') return '阶段事件';
+    return '环境与技术档案';
   }
 
   function groupStats(entries, line) {
@@ -114,10 +114,10 @@
   }
 
   async function applyTimeline(line, stage, options = {}) {
-    if (!STAGES[line]?.includes(stage)) throw new Error(`非法时间线：${line} / ${stage}`);
-    if (busy) throw new Error('世界书正在切换，请稍候');
+    if (!STAGES[line]?.includes(stage)) throw new Error(`观测坐标不成立：${line} / ${stage}`);
+    if (busy) throw new Error('资料域正在重定向，请稍候');
     busy = true;
-    setStatus(`正在装载 ${line} · ${stage}…`);
+    setStatus(`正在接入 CASE ${line} · ${stage}…`);
     try {
       const handle = await loadBook();
       const entries = Object.values(handle.data.entries || {});
@@ -133,16 +133,16 @@
       }
       await saveBook(handle);
       const state = {line, stage, changed, opened, closed, at: Date.now()};
-      localStorage.setItem('eva_magi_timeline_v4_1', JSON.stringify(state));
+      localStorage.setItem('eva_magi_timeline_v4_2', JSON.stringify(state));
       setActive(line, stage);
-      setStatus(`${line} · ${stage} 已装载\n修改 ${changed} 条｜开启 ${opened}｜关闭 ${closed}\n${groupStats(entries, line)}`);
+      setStatus(`CASE ${line} · ${stage} 资料域接入完成\n重定向 ${changed}｜接入 ${opened}｜隔离 ${closed}\n${groupStats(entries, line)}`);
       window.dispatchEvent(new CustomEvent('eva:timeline-changed', {detail: state}));
       try { window.parent?.dispatchEvent(new CustomEvent('eva:timeline-changed', {detail: state})); } catch (_) {}
-      if (!options.silent) toastr.success(`${line} · ${stage}`, '世界书切换完成');
+      if (!options.silent) toastr.success(`CASE ${line} · ${stage}`, 'MAGI资料域接入完成');
       return state;
     } catch (error) {
-      setStatus(`切换失败：${error.message}`, true);
-      if (!options.silent) toastr.error(error.message, '世界书切换失败');
+      setStatus(`接入中断：${error.message}`, true);
+      if (!options.silent) toastr.error(error.message, 'MAGI资料域接入中断');
       throw error;
     } finally { busy = false; }
   }
@@ -152,9 +152,9 @@
       const handle = await loadBook();
       const entries = Object.values(handle.data.entries || {});
       const opened = entries.filter(entry => !entry.disable).length;
-      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_1') || 'null');
-      setStatus(`世界书：${BOOK_NAME}\n总计 ${entries.length} 条｜当前开启 ${opened} 条\n${groupStats(entries, saved?.line || 'A')}`);
-    } catch (error) { setStatus(`扫描失败：${error.message}`, true); }
+      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_2') || 'null');
+      setStatus(`中央档案域在线\n收录 ${entries.length}｜当前接入 ${opened}\n${groupStats(entries, saved?.line || 'A')}`);
+    } catch (error) { setStatus(`校验中断：${error.message}`, true); }
   }
 
   function createPanel() {
@@ -171,13 +171,13 @@
 @media(max-width:600px){#${PANEL_ID}{right:8px;bottom:64px;width:calc(100vw - 16px)}}
 </style>`);
     const buttons = Object.entries(STAGES).map(([line, stages]) => `<div class="eva-line">CASE ${line}</div><div class="eva-grid">${stages.map(stage => `<button type="button" data-line="${line}" data-stage="${stage}">${stage}</button>`).join('')}</div>`).join('');
-    $('body').append(`<section id="${PANEL_ID}"><div class="eva-wb-head"><span>MAGI / WORLD BOOK</span><span class="eva-current">未选择</span></div><div class="eva-wb-body">${buttons}<button type="button" data-scan="1">扫描世界书</button><div class="eva-wb-status">等待时间线选择</div></div></section>`);
+    $('body').append(`<section id="${PANEL_ID}"><div class="eva-wb-head"><span>MAGI / CENTRAL DOGMA ARCHIVE</span><span class="eva-current">资料域未锁定</span></div><div class="eva-wb-body">${buttons}<button type="button" data-scan="1">执行档案校验</button><div class="eva-wb-status">等待观测坐标</div></div></section>`);
     const panel = $(`#${PANEL_ID}`);
     panel.on('click', '[data-line][data-stage]', event => applyTimeline(event.currentTarget.dataset.line, event.currentTarget.dataset.stage));
     panel.on('click', '[data-scan]', scanBook);
     panel.on('dblclick', '.eva-wb-head', () => panel.toggleClass('min'));
     try {
-      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_1') || 'null');
+      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_2') || 'null');
       if (saved?.line && saved?.stage) setActive(saved.line, saved.stage);
     } catch (_) {}
   }

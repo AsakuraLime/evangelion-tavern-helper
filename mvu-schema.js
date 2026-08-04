@@ -63,7 +63,7 @@ function registerSchema() {
   eventOn('mag_variable_initialized', data => {
     const parsed = EvaSchema.safeParse(data.stat_data || {});
     if (parsed.success) data.stat_data = {...data.stat_data, ...parsed.data};
-    else toastr.error(z.prettifyError?.(parsed.error) || parsed.error.message, 'MAGI Schema');
+    else toastr.error(z.prettifyError?.(parsed.error) || parsed.error.message, 'MAGI生体档案校验');
   });
 }
 
@@ -71,5 +71,5 @@ $(async () => {
   await waitGlobalInitialized('Mvu');
   registerSchema();
   window.dispatchEvent(new CustomEvent('eva:schema-ready'));
-  toastr.success('变量结构已加载', 'MAGI');
+  toastr.success('生体与档案监测接入', 'MAGI');
 });
