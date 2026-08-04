@@ -29,7 +29,7 @@
   function viewModel(stat = {}) {
     const meta = stat.元信息 || {};
     const world = stat.世界 || {};
-    const person = stat.玩家 || {};
+    const person = stat.登记对象 || {};
     const body = stat.主角状态 || {};
     const event = stat.事件 || {};
     return {

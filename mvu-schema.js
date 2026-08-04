@@ -11,9 +11,9 @@ export const EvaSchema = z.object({
     已初始化: z.coerce.boolean().prefault(false),
     世界线: z.enum(['A', 'B']).prefault('A'),
     阶段: z.string().prefault('TV前期'),
-    用户信息: z.string().prefault(''),
-    用户背景: z.string().prefault(''),
-    切入剧情: z.string().prefault(''),
+    登记信息: z.string().prefault(''),
+    履历摘要: z.string().prefault(''),
+    入域事态: z.string().prefault(''),
     推论开关: boolMap,
   }),
   世界: z.object({
@@ -24,7 +24,7 @@ export const EvaSchema = z.object({
     使徒警报: z.enum(['无', '观测', '接近', '交战']).prefault('无'),
     连续闲置回合: clampNumber(0, 999, 0).prefault(0),
   }),
-  玩家: z.object({
+  登记对象: z.object({
     姓名: z.string().prefault('{{user}}'),
     自述身份: z.string().prefault(''),
     所属组织: z.string().prefault('未确定'),
