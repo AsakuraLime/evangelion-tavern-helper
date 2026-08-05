@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const GLOBAL = '__EVA_EVENT_ENGINE_V4_2__';
+  const GLOBAL = '__EVA_EVENT_ENGINE_V4_3__';
   if (window[GLOBAL]?.cleanup) window[GLOBAL].cleanup();
 
   const listeners = [];
@@ -29,7 +29,7 @@
 
   on(window, 'eva:timeline-changed', timelineChanged);
   try {
-    const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_2') || 'null');
+    const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_3') || 'null');
     if (saved?.line && saved?.stage) timelineChanged({detail: saved});
   } catch (_) {}
 

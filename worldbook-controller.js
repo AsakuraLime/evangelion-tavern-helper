@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const BOOK_NAME = 'EVANGELION 4.2';
+  const BOOK_NAME = 'EVANGELION 4.3';
   const PANEL_ID = 'eva-worldbook-console';
   const STYLE_ID = 'eva-worldbook-console-style';
   const STAGES = {
@@ -81,6 +81,7 @@
     const scope = entryScope(entry);
     const title = String(entry?.comment || '');
     if (kind === 'prompt') return '核心指令';
+    if (kind === 'user' || title === 'user') return 'USER人员档案';
     if (kind === 'character' && /::共通$/.test(title)) return '人员基础档案';
     if (kind === 'character' && /::衣柜/.test(title)) return '服装连续性';
     if (kind === 'character' && scope === line) return `CASE ${line} 人员履历`;
@@ -133,7 +134,7 @@
       }
       await saveBook(handle);
       const state = {line, stage, changed, opened, closed, at: Date.now()};
-      localStorage.setItem('eva_magi_timeline_v4_2', JSON.stringify(state));
+      localStorage.setItem('eva_magi_timeline_v4_3', JSON.stringify(state));
       setActive(line, stage);
       setStatus(`CASE ${line} · ${stage} 资料域接入完成\n重定向 ${changed}｜接入 ${opened}｜隔离 ${closed}\n${groupStats(entries, line)}`);
       window.dispatchEvent(new CustomEvent('eva:timeline-changed', {detail: state}));
@@ -152,9 +153,40 @@
       const handle = await loadBook();
       const entries = Object.values(handle.data.entries || {});
       const opened = entries.filter(entry => !entry.disable).length;
-      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_2') || 'null');
+      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_3') || 'null');
       setStatus(`中央档案域在线\n收录 ${entries.length}｜当前接入 ${opened}\n${groupStats(entries, saved?.line || 'A')}`);
     } catch (error) { setStatus(`校验中断：${error.message}`, true); }
+  }
+
+  function profileText(profile = {}) {
+    const labels = {
+      line: '档案线路', stage: '观测阶段', name: '姓名', age: '年龄', gender: '性别', origin: '出身地／国籍',
+      appearance: '外貌特征', temperament: '性格与行为习惯', identity: '公开身份／职业', organization: '所属组织',
+      position: '权限与岗位', evaRelation: '与EVA的关系', abilities: '能力、训练与限制', relations: '既有关系',
+      goal: '当前目标', secret: '秘密／隐瞒信息', background: '个人经历与背景', anchor: '事件锚点', datetime: '入域日期与时刻',
+      location: '入域地点', plot: '当前事态', constraints: '行动意图／不可触碰事项',
+    };
+    const rows = Object.entries(labels).map(([key, label]) => `【${label}】${String(profile[key] || '未登记').trim() || '未登记'}`);
+    return `<user_profile>\n${rows.join('\n')}\n【补录规程】未登记字段可在后续交流中依据当事人的明确陈述与已发生事件渐进补齐；不得凭空授予驾驶资格、机密权限、既有关系或特殊能力。\n</user_profile>`;
+  }
+
+  async function saveUserProfile(profile = {}, options = {}) {
+    const handle = await loadBook();
+    const entries = Object.values(handle.data.entries || {});
+    const userEntry = entries.find(entry => String(entry.comment || entry.title || '').trim().toLowerCase() === 'user');
+    if (!userEntry) throw new Error('USER人员档案槽位不存在');
+    userEntry.content = profileText(profile);
+    userEntry.disable = false;
+    userEntry.constant = true;
+    userEntry.extensions ||= {};
+    userEntry.extensions.eva_scope = 'COMMON';
+    userEntry.extensions.eva_kind = 'user';
+    userEntry.extensions.eva_stages = ['*'];
+    await saveBook(handle);
+    const detail = {profile, at: Date.now()};
+    window.dispatchEvent(new CustomEvent('eva:user-profile-saved', {detail}));
+    if (!options.silent) toastr.success('人员档案已写入', 'MAGI');
+    return detail;
   }
 
   function createPanel() {
@@ -177,17 +209,19 @@
     panel.on('click', '[data-scan]', scanBook);
     panel.on('dblclick', '.eva-wb-head', () => panel.toggleClass('min'));
     try {
-      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_2') || 'null');
+      const saved = JSON.parse(localStorage.getItem('eva_magi_timeline_v4_3') || 'null');
       if (saved?.line && saved?.stage) setActive(saved.line, saved.stage);
     } catch (_) {}
   }
 
   window.__EVA_APPLY_TIMELINE__ = applyTimeline;
   window.__EVA_SCAN_WORLD_BOOK__ = scanBook;
+  window.__EVA_SAVE_USER_PROFILE__ = saveUserProfile;
   window.__EVA_WORLD_BOOK_CONTROL_CLEANUP__ = () => {
     $(`#${PANEL_ID}, #${STYLE_ID}`).remove();
     delete window.__EVA_APPLY_TIMELINE__;
     delete window.__EVA_SCAN_WORLD_BOOK__;
+    delete window.__EVA_SAVE_USER_PROFILE__;
   };
 
   const readyTimer = setInterval(() => {
